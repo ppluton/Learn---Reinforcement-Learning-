@@ -1,11 +1,19 @@
 [project]
 name = "tuto-baseline-rl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Eagle-1 — Pilote automatique par reinforcement learning"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "gymnasium[box2d]>=1.2.3",
     "stable-baselines3>=2.8.0",
     "torch>=2.11.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "streamlit>=1.45.0",
+    "imageio[ffmpeg]>=2.37.0",
+    "tensorboard>=2.19.0",
+    "matplotlib>=3.10.0",
+    "numpy>=2.2.0",
+    "requests>=2.32.0",
 ]
