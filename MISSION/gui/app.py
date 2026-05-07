@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import time
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -15,7 +14,32 @@ def fetch_episode():
     return response.json()
 
 
-if st.button("Lancer un atterrissage", type="primary"):
+def fetch_video():
+    response = requests.post(f"{API_URL}/play-video", timeout=60)
+    response.raise_for_status()
+    return response.content, {
+        "total_reward": float(response.headers.get("X-Total-Reward", 0)),
+        "success": response.headers.get("X-Success") == "1",
+    }
+
+
+col_btn1, col_btn2 = st.columns(2)
+launch_stats = col_btn1.button("Lancer un atterrissage", type="primary")
+launch_video = col_btn2.button("Lancer avec video")
+
+if launch_video:
+    with st.spinner("Le module est en approche... (rendu video)"):
+        video_bytes, meta = fetch_video()
+
+    if meta["success"]:
+        st.success(f"Atterrissage reussi ! Score : {meta['total_reward']:.1f}")
+    else:
+        st.error(f"Crash... Score : {meta['total_reward']:.1f}")
+
+    st.video(video_bytes)
+    st.caption("Replay de l'episode genere par l'API (rendu cote serveur, retourne en mp4).")
+
+if launch_stats:
     with st.spinner("Le module est en approche..."):
         episode = fetch_episode()
 

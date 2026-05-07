@@ -32,6 +32,11 @@ if st.sidebar.button("Lancer l'evaluation", type="primary"):
 
     # Metriques en haut
     st.subheader("Metriques globales")
+    st.caption(
+        "Vue d'ensemble sur les "
+        f"{len(episodes)} episodes joues. **Reward moyen** > 200 = pilote considere comme operationnel "
+        "(seuil officiel LunarLander). **Taux de reussite** = % d'atterrissages avec reward > 200."
+    )
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Reward moyen", f"{np.mean(rewards):.1f}")
     col2.metric("Taux de reussite", f"{np.mean(successes) * 100:.0f}%")
@@ -45,6 +50,11 @@ if st.sidebar.button("Lancer l'evaluation", type="primary"):
 
     with left:
         st.subheader("Rewards par episode")
+        st.caption(
+            "Score brut de chaque episode dans l'ordre chronologique. "
+            "Permet de reperer la variabilite : des pics negatifs isoles indiquent des crashes, "
+            "une courbe lissee au-dessus de 200 indique un pilote regulier."
+        )
         df_rewards = pd.DataFrame({
             "Episode": range(1, len(rewards) + 1),
             "Reward": rewards,
@@ -52,15 +62,31 @@ if st.sidebar.button("Lancer l'evaluation", type="primary"):
         st.line_chart(df_rewards.set_index("Episode"))
 
         st.subheader("Distribution des scores")
-        st.bar_chart(pd.cut(pd.Series(rewards), bins=15).value_counts().sort_index())
+        st.caption(
+            "Histogramme des rewards regroupes par tranches. "
+            "Une distribution concentree a droite (vers 250-300) signifie un pilote stable. "
+            "Une longue queue a gauche revele les episodes problematiques."
+        )
+        hist = pd.cut(pd.Series(rewards), bins=15).value_counts().sort_index()
+        hist.index = hist.index.astype(str)
+        st.bar_chart(hist)
 
     with right:
         st.subheader("Moyenne glissante (fenetre = 10)")
+        st.caption(
+            "Moyenne sur les 10 derniers episodes. "
+            "Lisse le bruit episode-par-episode pour reveler la performance reelle. "
+            "Si la courbe reste plate au-dessus de 200, le pilote est fiable."
+        )
         window = min(10, len(rewards))
         rolling_mean = pd.Series(rewards).rolling(window).mean()
         st.line_chart(rolling_mean.dropna())
 
         st.subheader("Statistiques detaillees")
+        st.caption(
+            "Resume chiffre. **Ecart-type** : plus il est faible, plus le pilote est constant. "
+            "**Mediane** vs **moyenne** : un ecart important signale des outliers (crashes rares)."
+        )
         st.dataframe(pd.DataFrame({
             "Metrique": ["Moyenne", "Ecart-type", "Mediane", "Min", "Max", "Steps moyen"],
             "Valeur": [
@@ -77,16 +103,21 @@ if st.sidebar.button("Lancer l'evaluation", type="primary"):
 
     # Analyse des actions
     st.subheader("Decisions du pilote automatique")
+    st.caption(
+        "LunarLander a 4 actions possibles : ne rien faire, allumer le moteur gauche, "
+        "le moteur principal (bas), ou le moteur droit. Comparer les reussites et les crashes "
+        "permet de voir si le pilote sur-utilise ou sous-utilise certaines manoeuvres."
+    )
 
-    all_actions = {"Ne rien faire": 0, "Moteur gauche": 0, "Moteur principal": 0, "Moteur droit": 0}
     actions_success = {"Ne rien faire": 0, "Moteur gauche": 0, "Moteur principal": 0, "Moteur droit": 0}
     actions_failure = {"Ne rien faire": 0, "Moteur gauche": 0, "Moteur principal": 0, "Moteur droit": 0}
 
     for ep in episodes:
         target = actions_success if ep["success"] else actions_failure
         for step in ep["steps"]:
-            all_actions[step["action_name"]] += 1
             target[step["action_name"]] += 1
+
+    all_actions = {k: actions_success[k] + actions_failure[k] for k in actions_success}
 
     col_act1, col_act2 = st.columns(2)
 
@@ -103,9 +134,3 @@ if st.sidebar.button("Lancer l'evaluation", type="primary"):
         }).set_index("Action")
         st.bar_chart(df_actions)
 
-    # Sauvegarde des donnees dans session_state
-    st.session_state["last_results"] = {
-        "rewards": rewards,
-        "successes": successes,
-        "n_episodes": n_episodes,
-    }
